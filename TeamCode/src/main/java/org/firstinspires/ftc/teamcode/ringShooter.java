@@ -9,6 +9,8 @@ import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+
 @TeleOp(name="ringShooter")
 public class ringShooter extends LinearOpMode {
 
@@ -35,7 +37,7 @@ public class ringShooter extends LinearOpMode {
         BL = hardwareMap.get(DcMotor.class, "Back Left");
         FL.setDirection(DcMotorSimple.Direction.REVERSE);
         BL.setDirection(DcMotorSimple.Direction.REVERSE);
-
+        double dtp = 0.3;
 
         //accessories
         shooter = hardwareMap.get(DcMotor.class, "Shotter");
@@ -47,33 +49,46 @@ public class ringShooter extends LinearOpMode {
         //imu
         imu = hardwareMap.get(IMU.class, "imu");
         IMU.Parameters parameters = new IMU.Parameters(new RevHubOrientationOnRobot(
-              RevHubOrientationOnRobot.LogoFacingDirection.UP,
-              RevHubOrientationOnRobot.UsbFacingDirection.FORWARD
+              RevHubOrientationOnRobot.LogoFacingDirection.BACKWARD,
+              RevHubOrientationOnRobot.UsbFacingDirection.UP
         ));
         imu.initialize(parameters);
 
         waitForStart();
-
+        imu.resetYaw();
+        if (isStopRequested()) return;
         while(opModeIsActive()){
+            //read sensors
+            double heading = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS);
+
             //drive
             double y = -gamepad1.left_stick_y; // Remember, Y stick value is reversed
             double x = gamepad1.left_stick_x * 1.1; // Counteract imperfect strafing
             double rx = gamepad1.right_stick_x;
-            double dtp = 0.3;
+
+
+            double rotX = x * Math.cos(-heading) - y * Math.sin(-heading);
+            double rotY = x * Math.sin(-heading) + y * Math.cos(-heading);
+
 
             // Denominator is the largest motor power (absolute value) or 1
             // This ensures all the powers maintain the same ratio,
             // but only if at least one is out of the range [-1, 1]
             double denominator = Math.max(Math.abs(y) + Math.abs(x) + Math.abs(rx), 1);
-            double frontLeftPower = (y + x + rx) / denominator * dtp;
-            double backLeftPower = (y - x + rx) / denominator * dtp;
-            double frontRightPower = (y - x - rx) / denominator * dtp;
-            double backRightPower = (y + x - rx) / denominator * dtp;
+            double frontLeftPower = (rotY + rotX + rx) / denominator * dtp;
+            double backLeftPower = (rotY - rotX + rx) / denominator * dtp;
+            double frontRightPower = (rotY - rotX - rx) / denominator * dtp;
+            double backRightPower = (rotY + rotX - rx) / denominator * dtp;
 
             FL.setPower(frontLeftPower);
             BL.setPower(backLeftPower);
             FR.setPower(frontRightPower);
             BR.setPower(backRightPower);
+
+            //drive fast
+            if(gamepad1.right_trigger > 0.1){
+                dtp = gamepad1.right_trigger;
+            } else dtp = .3;
 
             //intake
             if(gamepad1.right_bumper) {
@@ -83,7 +98,7 @@ public class ringShooter extends LinearOpMode {
             }
 
             //shooting
-            if(gamepad1.left_bumper) {
+            if(gamepad1.left_bumper && (Math.toDegrees(heading) < 20 && Math.toDegrees(heading) > -20)) {
                 shooter.setPower(1);
                 sleep(3000);
                 for(int i=1; i<4; i++) {
@@ -95,8 +110,14 @@ public class ringShooter extends LinearOpMode {
                 shooter.setPower(0);
             }
 
+            //reset yaw
+            if(gamepad1.back){
+                imu.resetYaw();
+            }
+
 
             telemetry.addData("Timer", timer.seconds());
+            telemetry.addData("yaw", Math.toDegrees(heading));
             telemetry.update();
         }
     }
