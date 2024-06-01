@@ -84,16 +84,17 @@ public class ringShooter extends LinearOpMode {
 
             //shooting
             if(gamepad1.left_bumper) {
-                timer.reset();
-                shooting = true;
+                shooter.setPower(1);
+                sleep(3000);
+                for(int i=1; i<4; i++) {
+                    pusher.setPosition(.5);
+                    sleep(500);
+                    pusher.setPosition(.3);
+                    sleep(500);
+                }
+                shooter.setPower(0);
             }
 
-            if(shooting){
-                //shooter.setPower(1);
-                if(timer.seconds() > 3) {
-                    pusher.setPosition(0.5);
-                }
-            }
 
             telemetry.addData("Timer", timer.seconds());
             telemetry.update();
