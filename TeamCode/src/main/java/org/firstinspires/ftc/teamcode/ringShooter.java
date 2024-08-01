@@ -5,11 +5,14 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.DistanceSensor;
+import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 
 @TeleOp(name="ringShooter")
 public class ringShooter extends LinearOpMode {
@@ -18,17 +21,24 @@ public class ringShooter extends LinearOpMode {
     private ElapsedTime timer = new ElapsedTime();
     private DcMotor FR, FL, BR, BL;
     private DcMotor shooter, intake;
-    private Servo pusher;
+    private Servo pusher, tilt;
+    private DistanceSensor distanceSensor;
     private IMU imu;
 
     double pushPos = .5;
     boolean shooting = false;
+    double tiltPosition;
+
 
 
     @Override
     public void runOpMode(){
         //timer
         timer.reset();
+
+        //gamepad state
+        Gamepad currentGamepad1 = new Gamepad();
+        Gamepad previousGamepad1 = new Gamepad();
 
         //drivetrain
         FR = hardwareMap.get(DcMotor.class, "Front Right");
@@ -44,7 +54,11 @@ public class ringShooter extends LinearOpMode {
         intake = hardwareMap.get(DcMotor.class, "Intake");
         intake.setDirection(DcMotorSimple.Direction.REVERSE);
         pusher = hardwareMap.get(Servo.class, "Pusher");
+        tilt = hardwareMap.get(Servo.class, "Tilt");
+        tilt.setPosition(1.0);
+        tiltPosition = tilt.getPosition();
         pusher.setPosition(0.3);
+        distanceSensor = hardwareMap.get(DistanceSensor.class, "Distance");
 
         //imu
         imu = hardwareMap.get(IMU.class, "imu");
@@ -58,8 +72,13 @@ public class ringShooter extends LinearOpMode {
         imu.resetYaw();
         if (isStopRequested()) return;
         while(opModeIsActive()){
+            previousGamepad1.copy(currentGamepad1);
+            currentGamepad1.copy(gamepad1);
+
             //read sensors
             double heading = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS);
+            double distance = distanceSensor.getDistance(DistanceUnit.CM);
+
 
             //drive
             double y = -gamepad1.left_stick_y; // Remember, Y stick value is reversed
@@ -110,6 +129,13 @@ public class ringShooter extends LinearOpMode {
                 shooter.setPower(0);
             }
 
+            //tilt
+            if(currentGamepad1.dpad_up && !previousGamepad1.dpad_up && tiltPosition < 1.0){
+                tilt.setPosition(tiltPosition+=0.05);
+            }else if(currentGamepad1.dpad_down && !previousGamepad1.dpad_down && tiltPosition > 0.85) {
+                tilt.setPosition(tiltPosition-=0.05);
+            }
+
             //reset yaw
             if(gamepad1.back){
                 imu.resetYaw();
@@ -118,6 +144,7 @@ public class ringShooter extends LinearOpMode {
 
             telemetry.addData("Timer", timer.seconds());
             telemetry.addData("yaw", Math.toDegrees(heading));
+            telemetry.addData("tiltPosition", tilt.getPosition());
             telemetry.update();
         }
     }
