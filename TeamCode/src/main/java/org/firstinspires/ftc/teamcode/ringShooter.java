@@ -55,7 +55,7 @@ public class ringShooter extends LinearOpMode {
         intake.setDirection(DcMotorSimple.Direction.REVERSE);
         pusher = hardwareMap.get(Servo.class, "Pusher");
         tilt = hardwareMap.get(Servo.class, "Tilt");
-        tilt.setPosition(1.0);
+        tilt.setPosition(0.95);
         tiltPosition = tilt.getPosition();
         pusher.setPosition(0.3);
         distanceSensor = hardwareMap.get(DistanceSensor.class, "Distance");
@@ -123,17 +123,17 @@ public class ringShooter extends LinearOpMode {
                 for(int i=1; i<4; i++) {
                     pusher.setPosition(.5);
                     sleep(500);
-                    pusher.setPosition(.3);
-                    sleep(500);
+                    pusher.setPosition(.28);
+                    sleep(600);
                 }
                 shooter.setPower(0);
             }
 
             //tilt
-            if(currentGamepad1.dpad_up && !previousGamepad1.dpad_up && tiltPosition < 1.0){
-                tilt.setPosition(tiltPosition+=0.05);
-            }else if(currentGamepad1.dpad_down && !previousGamepad1.dpad_down && tiltPosition > 0.85) {
-                tilt.setPosition(tiltPosition-=0.05);
+            if(currentGamepad1.dpad_up && !previousGamepad1.dpad_up && tiltPosition < 0.95){
+                tilt.setPosition(tiltPosition+=0.015);
+            }else if(currentGamepad1.dpad_down && !previousGamepad1.dpad_down && tiltPosition > 0.9) {
+                tilt.setPosition(tiltPosition-=0.015);
             }
 
             //reset yaw
