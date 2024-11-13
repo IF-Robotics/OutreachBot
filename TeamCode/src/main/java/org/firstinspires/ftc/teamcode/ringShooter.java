@@ -18,7 +18,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 public class ringShooter extends LinearOpMode {
 
     //instantiate objects
-    private ElapsedTime timer = new ElapsedTime();
+    //private ElapsedTime timer = new ElapsedTime();
     private DcMotor FR, FL, BR, BL;
     private DcMotor shooter, intake;
     private Servo pusher, tilt;
@@ -28,13 +28,14 @@ public class ringShooter extends LinearOpMode {
     double pushPos = .5;
     boolean shooting = false;
     double tiltPosition;
+    boolean disableDistance = false;
 
 
 
     @Override
     public void runOpMode(){
         //timer
-        timer.reset();
+        //timer.reset();
 
         //gamepad state
         Gamepad currentGamepad1 = new Gamepad();
@@ -76,7 +77,8 @@ public class ringShooter extends LinearOpMode {
             currentGamepad1.copy(gamepad1);
 
             //read sensors
-            double heading = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS);
+            double heading = 0;
+            double launchHeading = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS);
             double distance = distanceSensor.getDistance(DistanceUnit.CM);
 
 
@@ -109,15 +111,22 @@ public class ringShooter extends LinearOpMode {
                 dtp = gamepad1.right_trigger;
             } else dtp = .3;
 
+            //disable distance sensor
+            if(currentGamepad1.options && !previousGamepad1.options && !disableDistance){
+                disableDistance = true;
+            }else if(currentGamepad1.options && !previousGamepad1.options && disableDistance){
+                disableDistance = false;
+            }
+
             //intake
-            if(gamepad1.right_bumper) {
+            if((distance > 5 || disableDistance) && gamepad1.right_bumper) {
                 intake.setPower(1);
             }else {
                 intake.setPower(0);
             }
 
             //shooting
-            if(gamepad1.left_bumper && (Math.toDegrees(heading) < 20 && Math.toDegrees(heading) > -20)) {
+            if(gamepad1.left_bumper && (Math.toDegrees(launchHeading) < 20 && Math.toDegrees(launchHeading) > -20)) {
                 shooter.setPower(1);
                 sleep(3000);
                 for(int i=1; i<4; i++) {
@@ -142,9 +151,11 @@ public class ringShooter extends LinearOpMode {
             }
 
 
-            telemetry.addData("Timer", timer.seconds());
+            //telemetry.addData("Timer", timer.seconds());
             telemetry.addData("yaw", Math.toDegrees(heading));
             telemetry.addData("tiltPosition", tilt.getPosition());
+            telemetry.addData("distance", distance);
+            telemetry.addData("disableDistance", disableDistance);
             telemetry.update();
         }
     }
